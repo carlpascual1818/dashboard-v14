@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - COO Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;margin:0;background:#0b1220;color:#e6eefc}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:#0b1220;position:sticky;top:0}
+    .brand{font-weight:900;cursor:pointer}
+    .wrap{padding:16px}
+    .card{background:#111b33;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px}
+    .muted{opacity:.75;font-size:13px}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    select,input{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0b1220;color:#e6eefc}
+    button{background:#1f7aff;border:0;color:#fff;font-weight:800;border-radius:10px;padding:10px 12px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:8px 8px;text-align:left;vertical-align:top}
+    th{opacity:.85}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:1100px){.grid{grid-template-columns:1.2fr .8fr}}
+    canvas{max-height:280px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand" id="back">COO Dashboard</div>
+    <div class="muted" id="title"></div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <div style="font-weight:900" id="pageName">Loading...</div>
+      <div class="muted" id="pageMeta"></div>
+
+      <div class="filters" id="filters"></div>
+
+      <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+        <button id="reload">Reload</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Data</div>
+        <div id="tableWrap"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Trend</div>
+        <div class="muted" id="chartHint">Charts show for KPI views when data fits.</div>
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+  </div>
+<script src="config.js"></script>
+<script>
+  const url = new URL(location.href);
+  const pageId = url.searchParams.get('page_id') || '';
+
+  function getToken(){ return localStorage.getItem('token') || ''; }
+  function getUser(){ try{return JSON.parse(localStorage.getItem('user')||'{}');}catch(e){return {}; } }
+  function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  async function api(action, payload){
+    const r = await fetch(API_URL, {
+      method:'POST',
+      headers:{
+        'Content-Type':'text/plain;charset=utf-8'  // ✅ CORS FIX!
+      },
+      body: JSON.stringify(Object.assign({action, token:getToken()}, payload||{})),
+      redirect: 'follow'  // ✅ Handle Google redirects
+    });
+    return await r.json();
+  }
+
+  function renderTable(headers, rows){
+    if(!headers || !headers.length) return '<div class="muted">No data</div>';
+    let html = '<table><thead><tr>';
+    headers.forEach(h=>{ html+='<th>'+esc(h)+'</th>'; });
+    html+='</tr></thead><tbody>';
+    (rows||[]).forEach(row=>{
+      html+='<tr>';
+      row.forEach(c=>{ html+='<td>'+esc(c)+'</td>'; });
+      html+='</tr>';
+    });
+    html+='</tbody></table>';
+    return html;
+  }
+
+  let chart = null;
+  function renderChart(headers, rows, meta){
+    const chartEl = document.getElementById('chart');
+    if(chart){ chart.destroy(); chart=null; }
+
+    const cfg = (meta && meta.chart_type) ? meta : null;
+    if(!cfg || !cfg.x_axis || !cfg.y_axis) return;
+
+    const xIdx = headers.indexOf(cfg.x_axis);
+    const yIdx = headers.indexOf(cfg.y_axis);
+    if(xIdx<0||yIdx<0) return;
+
+    const labels=[], data=[];
+    (rows||[]).forEach(r=>{
+      labels.push(r[xIdx]||'');
+      data.push(parseFloat(r[yIdx])||0);
+    });
+
+    const ctx = chartEl.getContext('2d');
+    chart = new Chart(ctx, {
+      type: cfg.chart_type || 'line',
+      data: { labels, datasets:[{ label: cfg.y_axis, data, borderColor:'#1f7aff', backgroundColor:'rgba(31,122,255,0.2)' }] },
+      options:{ responsive:true, maintainAspectRatio:true }
+    });
+  }
+
+  function buildFilters(meta){
+    const wrap = document.getElementById('filters');
+    wrap.innerHTML='';
+    if(!meta || !meta.filters) return;
+    const filters = (typeof meta.filters==='string') ? meta.filters.split(',') : meta.filters;
+    filters.forEach(f=>{
+      if(f==='person'){
+        const sel = document.createElement('select');
+        sel.id='person';
+        sel.innerHTML='<option value="">All People</option>';
+        wrap.appendChild(sel);
+      }
+      if(f==='kpi'){
+        const sel = document.createElement('select');
+        sel.id='kpi';
+        sel.innerHTML='<option value="">All KPIs</option>';
+        wrap.appendChild(sel);
+      }
+      if(f==='date_from'){
+        const inp = document.createElement('input');
+        inp.type='date';
+        inp.id='date_from';
+        inp.placeholder='From';
+        wrap.appendChild(inp);
+      }
+      if(f==='date_to'){
+        const inp = document.createElement('input');
+        inp.type='date';
+        inp.id='date_to';
+        inp.placeholder='To';
+        wrap.appendChild(inp);
+      }
+    });
+  }
+
+  async function load(){
+    if(!getToken()){
+      location.href = 'index.html';
+      return;
+    }
+    document.getElementById('title').textContent = pageId;
+    const res = await api('page', { page_id: pageId, filters: collectFilters() });
+    if(!res.success){
+      document.getElementById('pageName').textContent = 'Access denied';
+      document.getElementById('pageMeta').textContent = res.error || '';
+      document.getElementById('tableWrap').innerHTML = '<div class="muted">No data</div>';
+      if(chart){ chart.destroy(); chart=null; }
+      return;
+    }
+    document.getElementById('pageName').textContent = res.page && res.page.display_name ? res.page.display_name : pageId;
+    document.getElementById('pageMeta').textContent = (res.page && res.page.view_type ? ('View: ' + res.page.view_type) : '') + (res.scope ? (' | Scope: ' + res.scope) : '');
+    buildFilters(res.meta || {});
+    document.getElementById('tableWrap').innerHTML = renderTable(res.headers, res.rows);
+    renderChart(res.headers, res.rows, res.meta || {});
+  }
+
+  function collectFilters(){
+    const out = {};
+    const p = document.getElementById('person');
+    const k = document.getElementById('kpi');
+    const d1 = document.getElementById('date_from');
+    const d2 = document.getElementById('date_to');
+    if(p && p.value) out.person = p.value;
+    if(k && k.value) out.kpi = k.value;
+    if(d1 && d1.value) out.date_from = d1.value;
+    if(d2 && d2.value) out.date_to = d2.value;
+    return out;
+  }
+
+  document.getElementById('back').addEventListener('click', ()=>{
+    location.href = 'portal.html';
+  });
+  document.getElementById('reload').addEventListener('click', load);
+
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accept Invite - COO Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Inter,Arial,sans-serif;background:#0b1220;color:#fff;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .card{width:100%;max-width:420px;background:#111b33;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    h1{margin:0 0 6px;font-size:22px}
+    .sub{opacity:.8;margin:0 0 18px;font-size:13px}
+    label{display:block;margin:12px 0 6px;font-size:13px;opacity:.9}
+    input{width:100%;padding:12px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0b1220;color:#fff;font-size:14px}
+    button{width:100%;margin-top:14px;padding:12px;border-radius:10px;border:0;background:#1f7aff;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+    button:disabled{opacity:.65;cursor:not-allowed}
+    .msg{margin-top:12px;font-size:13px}
+    .err{color:#ff7a7a}
+    .ok{color:#7affb2}
+    .small{font-size:12px;opacity:.8}
+    a{color:#9bc2ff}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Accept Invite</h1>
+    <p class="sub">Join COO Dashboard</p>
+
+    <form id="f">
+      <label>Invite Code</label>
+      <input id="code" type="text" required>
+
+      <label>Your Name</label>
+      <input id="name" type="text" required>
+
+      <label>Password</label>
+      <input id="pass" type="password" required>
+
+      <button id="btn" type="submit">Create Account</button>
+      <div id="msg" class="msg"></div>
+    </form>
+
+    <div style="margin-top:12px;text-align:center">
+      <a class="small" href="index.html">Back to login</a>
+    </div>
+  </div>
+<script src="config.js"></script>
+<script>
+  const u = new URL(location.href);
+  const pre = u.searchParams.get('code') || '';
+  document.getElementById('code').value = pre;
+
+  function setMsg(text, cls){
+    const el=document.getElementById('msg');
+    el.className='msg ' + (cls||'');
+    el.textContent=text||'';
+  }
+
+  document.getElementById('f').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const btn=document.getElementById('btn');
+    btn.disabled=true;
+    setMsg('Submitting...');
+    try{
+      const payload = {
+        action:'acceptInvite',
+        invite_code: document.getElementById('code').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        password: document.getElementById('pass').value
+      };
+      const r = await fetch(API_URL, {
+        method:'POST',
+        headers:{
+          'Content-Type':'text/plain;charset=utf-8'  // ✅ CORS FIX!
+        },
+        body: JSON.stringify(payload),
+        redirect: 'follow'  // ✅ Handle Google redirects
+      });
+      const data = await r.json();
+      if(!data.success){
+        setMsg(data.error || 'Failed', 'err');
+        btn.disabled=false;
+        return;
+      }
+      setMsg('Account created. Go to login.', 'ok');
+      setTimeout(()=>{ location.href = 'index.html'; }, 700);
+    }catch(err){
+      console.error(err);
+      setMsg('Error. Check console.', 'err');
+      btn.disabled=false;
+    }
+  });
+</script>
+</body>
+</html>
