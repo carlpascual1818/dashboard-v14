@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal - COO Dashboard</title>
@@ -53,7 +52,6 @@
       <div id="hint" class="muted"></div>
     </main>
   </div>
-
 <script src="config.js"></script>
 <script>
 
@@ -64,16 +62,18 @@
   function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   async function api(action, payload){
-    // Use x-www-form-urlencoded to avoid CORS preflight on Apps Script Web Apps.
-    const params = new URLSearchParams();
-    params.set('action', action);
-    params.set('token', getToken());
-    Object.entries(payload||{}).forEach(([k,v]) => params.set(k, v == null ? '' : String(v)));
-    const r = await fetch(API_URL, { method:'POST', body: params });
+    const r = await fetch(API_URL, {
+      method:'POST',
+      headers:{
+        'Content-Type':'text/plain;charset=utf-8'  // ✅ CORS FIX!
+      },
+      body: JSON.stringify(Object.assign({action, token:getToken()}, payload||{})),
+      redirect: 'follow'  // ✅ Handle Google redirects
+    });
     return await r.json();
   }
 
-function renderNav(nav){
+  function renderNav(nav){
     const root=document.getElementById('nav');
     root.innerHTML='';
     (nav.categories||[]).forEach(cat=>{
