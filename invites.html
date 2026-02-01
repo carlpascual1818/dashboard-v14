@@ -69,7 +69,7 @@
         name: document.getElementById('name').value.trim(),
         password: document.getElementById('pass').value
       };
-      const r = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      const r = await fetch(API_URL, { method:'POST', body: (function(){ const p=new URLSearchParams(); const o=payload; Object.keys(o).forEach(k=>p.set(k, o[k]==null?'':String(o[k]))); return p; })() });
       const data = await r.json();
       if(!data.success){
         setMsg(data.error || 'Failed', 'err');
