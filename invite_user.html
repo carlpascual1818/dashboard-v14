@@ -95,15 +95,16 @@
   function show(msg){ document.getElementById('out').innerHTML = '<div class="msg">' + msg + '</div>'; }
 
   async function api(action, payload){
-    const r = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(Object.assign({action, token:getToken()}, payload||{}))
-    });
+    // Use x-www-form-urlencoded to avoid CORS preflight on Apps Script Web Apps.
+    const params = new URLSearchParams();
+    params.set('action', action);
+    params.set('token', getToken());
+    Object.entries(payload||{}).forEach(([k,v]) => params.set(k, v == null ? '' : String(v)));
+    const r = await fetch(API_URL, { method:'POST', body: params });
     return await r.json();
   }
 
-  document.getElementById('backBtn').addEventListener('click', function(){
+document.getElementById('backBtn').addEventListener('click', function(){
     location.href = 'portal.html';
   });
 
