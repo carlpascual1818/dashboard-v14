@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - COO Dashboard</title>
@@ -44,10 +43,8 @@
       <a class="small" href="invites.html">Accept invite</a>
     </div>
   </div>
-
 <script src="config.js"></script>
 <script>
-
   function setMsg(text, cls){
     const el=document.getElementById('msg');
     el.className='msg ' + (cls||'');
@@ -68,7 +65,14 @@
     const password=document.getElementById('password').value;
 
     try{
-      const r = await fetch(API_URL, { method: 'POST', body: new URLSearchParams({ action:'login', email, password }) });
+      const r = await fetch(API_URL, {
+        method:'POST',
+        headers:{
+          'Content-Type':'text/plain;charset=utf-8'  // ✅ CORS FIX!
+        },
+        body: JSON.stringify({ action:'login', email, password }),
+        redirect: 'follow'  // ✅ Handle Google redirects
+      });
       const data = await r.json();
       if(!data.success){
         setMsg(data.error || 'Login failed', 'err');
