@@ -67,15 +67,16 @@
   function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   async function api(action, payload){
-    const r = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(Object.assign({action, token:getToken()}, payload||{}))
-    });
+    // Use x-www-form-urlencoded to avoid CORS preflight on Apps Script Web Apps.
+    const params = new URLSearchParams();
+    params.set('action', action);
+    params.set('token', getToken());
+    Object.entries(payload||{}).forEach(([k,v]) => params.set(k, v == null ? '' : String(v)));
+    const r = await fetch(API_URL, { method:'POST', body: params });
     return await r.json();
   }
 
-  function renderTable(headers, rows){
+function renderTable(headers, rows){
     if(!headers || !headers.length){ return '<div class="muted">No data</div>'; }
     let html = '<table><thead><tr>' + headers.map(h=>'<th>'+esc(h)+'</th>').join('') + '</tr></thead><tbody>';
     (rows||[]).forEach(r=>{
