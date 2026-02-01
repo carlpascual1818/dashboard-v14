@@ -42,10 +42,10 @@
 
     <div class="demo">
       <p><strong>Demo Accounts:</strong></p>
-      <p>Owner: carl@demo.com / changeme</p>
-      <p>Manager: cs.manager@demo.com / demo123</p>
-      <p>HR: hr@demo.com / demo123</p>
-      <p>Finance: finance@demo.com / demo123</p>
+      <p>Owner: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="462527342a0622232b296825292b">[email&#160;protected]</a> / changeme</p>
+      <p>Manager: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2e4d5d00434f404f494b5c6e4a4b4341004d4143">[email&#160;protected]</a> / demo123</p>
+      <p>HR: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="234b516347464e4c0d404c4e">[email&#160;protected]</a> / demo123</p>
+      <p>Finance: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8fe9e6e1eee1eceacfebeae2e0a1ece0e2">[email&#160;protected]</a> / demo123</p>
     </div>
 
     <div class="row">
@@ -53,8 +53,7 @@
       <a class="small" href="invites.html">Accept invite</a>
     </div>
   </div>
-
-<script src="config.js"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="config.js"></script>
 <script>
   function setMsg(text, cls){
     const el=document.getElementById('msg');
@@ -76,24 +75,9 @@
     const password=document.getElementById('password').value;
 
     try{
-      const r = await fetch(API_URL, { method: 'POST', body: new URLSearchParams({ action:'login', email, password }) });
-      const data = await r.json();
-      if(!data.success){
-        setMsg(data.error || 'Login failed', 'err');
-        btn.disabled=false;
-        return;
-      }
-      saveAuth(data);
-      setMsg('Login success, redirecting...', 'ok');
-      setTimeout(() => {
-        window.location.href = 'portal.html';
-      }, 500);
-    }catch(err){
-      console.error(err);
-      setMsg('Login error. Check config.js and console.', 'err');
-      btn.disabled=false;
-    }
-  });
-</script>
-</body>
-</html>
+      const r = await fetch(API_URL, {
+        method:'POST',
+        headers:{
+          'Content-Type':'text/plain;charset=utf-8'  // ✅ CORS FIX!
+        },
+        body: JSON.stringify({ action:'login', email, pa
